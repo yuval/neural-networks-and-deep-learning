@@ -12,6 +12,7 @@ and omits many desirable features.
 #### Libraries
 # Standard library
 import random
+import sys
 
 # Third-party libraries
 import numpy as np
@@ -32,7 +33,7 @@ class Network():
         self.num_layers = len(sizes)
         self.sizes = sizes
         self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
-        self.weights = [np.random.randn(y, x) 
+        self.weights = [np.random.randn(y, x)
                         for x, y in zip(sizes[:-1], sizes[1:])]
 
     def feedforward(self, a):
@@ -65,6 +66,55 @@ class Network():
                     j, self.evaluate(test_data), n_test)
             else:
                 print "Epoch {0} complete".format(j)
+        self.writeModel()
+
+    def writeModel(self):
+        """Printing the model to file in a format readable by Ninja. Ninja
+        expects the weights of the biases to be in the weights matrix and
+        not in a separate biases vector, so we combine the two in each layer.
+        For example: For a network with 784 input nodes, 2 hidden nodes,
+        and 10 output nodes (784 2 10), we first have the following matrices:
+        w1 = 2 x 784
+        b1 = 2 x 1
+        w2 = 10 x 2
+        b2 = 10 x 1
+
+        After combining biases and weights we have:
+        w1 = 2 x 785
+        w2 = 10 x 3
+        """
+        model_file = open('model.txt', 'w')
+
+        # first, writing headers
+        model_file.write("num_layers=" + str(self.num_layers))
+        model_file.write('\n')
+        model_file.write("layer_sizes=")
+        for s in self.sizes:
+            model_file.write(str(s))
+            model_file.write(' ')
+        model_file.write('\n')
+        model_file.write('w')
+        model_file.write('\n\n')
+
+        # second, writing biases and weights after combining them together.
+        # iterating over the bias matrices
+        for idx, val in enumerate(self.biases):
+            combined_rows = list()
+            index = 0
+            # iterating over the rows in the weights matrix for layer 'idx'
+            for row in self.weights[idx]:
+                # stacking a single biases and weights row
+                combined = np.hstack((np.atleast_2d(val)[index], row))
+                combined_rows.append(combined)
+                index += 1
+            for row in combined_rows:
+                # iterating over all elements in the combined row
+                for x in np.nditer(row):
+                    model_file.write(str(x))
+                    model_file.write(' ')
+                model_file.write('\n')
+            model_file.write('\n')
+        model_file.close()
 
     def update_mini_batch(self, mini_batch, eta):
         """Update the network's weights and biases by applying
@@ -77,9 +127,9 @@ class Network():
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights = [w-(eta/len(mini_batch))*nw 
+        self.weights = [w-(eta/len(mini_batch))*nw
                         for w, nw in zip(self.weights, nabla_w)]
-        self.biases = [b-(eta/len(mini_batch))*nb 
+        self.biases = [b-(eta/len(mini_batch))*nb
                        for b, nb in zip(self.biases, nabla_b)]
 
     def backprop(self, x, y):
@@ -122,14 +172,14 @@ class Network():
         network outputs the correct result. Note that the neural
         network's output is assumed to be the index of whichever
         neuron in the final layer has the highest activation."""
-        test_results = [(np.argmax(self.feedforward(x)), y) 
+        test_results = [(np.argmax(self.feedforward(x)), y)
                         for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_results)
-        
+
     def cost_derivative(self, output_activations, y):
         """Return the vector of partial derivatives \partial C_x /
         \partial a for the output activations."""
-        return (output_activations-y) 
+        return (output_activations-y)
 
 #### Miscellaneous functions
 def sigmoid(z):
